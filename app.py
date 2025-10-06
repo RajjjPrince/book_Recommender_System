@@ -1,39 +1,47 @@
-from flask import Flask, render_template, request
+from flask import Flask,render_template,request
 import pickle
 import numpy as np
-import pandas as pd
+
+popular_df = pickle.load(open('model/popular.pkl','rb'))
+pt = pickle.load(open('model/pt.pkl','rb'))
+books = pickle.load(open('model/books.pkl','rb'))
+similarity_scores = pickle.load(open('model/similarity_score.pkl','rb'))
 
 app = Flask(__name__)
 
-# Load the pickle files
-with open("model/pt.pkl", "rb") as f:
-    pt = pickle.load(f)
-
-with open("model/similarity_score.pkl", "rb") as f:
-    similarity_score = pickle.load(f)
-
-# Recommendation function
-def recommend(book_name):
-    if book_name not in pt.index:
-        return None
-    index = np.where(pt.index == book_name)[0][0]
-    similar_items = sorted(list(enumerate(similarity_score[index])), key=lambda x: x[1], reverse=True)[1:6]
-    recommended_books = [pt.index[i[0]] for i in similar_items]
-    return recommended_books
-
-# Routes
-@app.route('/', methods=['GET'])
+@app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html',
+                           book_name = list(popular_df['Book-Title'].values),
+                           author=list(popular_df['Book-Author'].values),
+                           image=list(popular_df['Image-URL-M'].values),
+                           votes=list(popular_df['num_ratings'].values),
+                           rating=list(popular_df['avg_ratings'].values)
+                           )
 
-@app.route('/recommend', methods=['POST'])
-def recommend_route():
-    book_name = request.form.get('book')
-    recommendations = recommend(book_name)
-    if recommendations:
-        return render_template('index.html', recommendations=recommendations)
-    else:
-        return render_template('index.html', error="Book not found in the dataset.")
+@app.route('/recommend')
+def recommend_ui():
+    return render_template('recommend.html')
+
+@app.route('/recommend_books',methods=['post'])
+def recommend():
+    user_input = request.form.get('user_input')
+    index = np.where(pt.index == user_input)[0][0]
+    similar_items = sorted(list(enumerate(similarity_scores[index])), key=lambda x: x[1], reverse=True)[1:5]
+
+    data = []
+    for i in similar_items:
+        item = []
+        temp_df = books[books['Book-Title'] == pt.index[i[0]]]
+        item.extend(list(temp_df.drop_duplicates('Book-Title')['Book-Title'].values))
+        item.extend(list(temp_df.drop_duplicates('Book-Title')['Book-Author'].values))
+        item.extend(list(temp_df.drop_duplicates('Book-Title')['Image-URL-M'].values))
+
+        data.append(item)
+
+    print(data)
+
+    return render_template('recommend.html',data=data)
 
 if __name__ == '__main__':
     app.run(debug=True)
