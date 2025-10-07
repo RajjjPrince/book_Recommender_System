@@ -15,3 +15,16 @@
 
 ## Project Structure
 
+BookFinder/
+│
+├── app.py # Main Flask application
+├── model/ # Precomputed data and models
+│ ├── popular.pkl
+│ ├── pt.pkl
+│ ├── books.pkl
+│ └── similarity_score.pkl
+├── templates/ # HTML templates
+│ ├── index.html
+│ └── recommend.html
+└── static/ # Optional CSS/JS/images
+
